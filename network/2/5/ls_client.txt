@@ -1,3 +1,0 @@
-client
-client.c
-lorem.txt
