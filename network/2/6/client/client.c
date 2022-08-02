@@ -58,11 +58,12 @@ int main(int argc, char const* argv[])
   char msg[500];
   while(1)
   {
-    int n=recv(server_fd,msg,2048,0);
+    int n=recv(server_fd,msg,500,0);
     if(n<=0)
       break;
     else
     {
+    	printf("=");
       fprintf(fp,"%s",msg);
 
     }

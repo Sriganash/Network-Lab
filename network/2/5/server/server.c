@@ -53,21 +53,21 @@ void main()
 		exit(EXIT_FAILURE);
 	}
 
-  system("ls > /home/dell/Desktop/cn/cycle2/ls_server.txt");
+  system("ls > /home/user/Desktop/network/2/ls_server.txt");
 
   char filename[50];
   recv(client_fd,filename,1024,0);
 
   FILE *fp;
   fp=fopen(filename,"r");
-  char msg[50];
+  char msg[500];
   while(fgets(msg,2048,fp)!=NULL)
   {
     printf("%s^^",msg);
+    sleep(1);
     send(client_fd,msg,sizeof(msg),0);
   }
 
-  snprintf(buffer,1024,"cat %s",filename);
-  system(buffer);
+  printf("\nThe file was sent to the client.....");
 
 }

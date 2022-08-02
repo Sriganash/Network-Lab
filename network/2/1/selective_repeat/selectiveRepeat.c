@@ -6,10 +6,11 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <time.h>
-#define port 8060
+#define port 8080
 
 int frames[10];
 int totalFrames = 10;
+int resend=1;
 
 int sockfd;
 struct sockaddr_in server;
@@ -22,10 +23,12 @@ double timeTaken;
 
 
 int acknowledge(){
+    resend=-1;
     char *retmsg = (char *)malloc(sizeof(char) * 100);
     recv(sockfd, retmsg, sizeof(char) * 100, 0);
-    if (!strcmp(retmsg,"NAK")){
+    if (retmsg[0]=='N'){
         printf("Message from server: %s\n",retmsg);
+        resend=retmsg[strlen(retmsg)-1]-'0';
         return 0;
     }
     else{
@@ -34,7 +37,7 @@ int acknowledge(){
     }
 }
 
-void *stopAndWait(void *ptr)
+void *selectiveRepeat(void *ptr)
 {
     int windowSize = *(int *)ptr;
 
@@ -53,53 +56,67 @@ void *stopAndWait(void *ptr)
         msg[0] = '\0';
         if (!flag){
             flag=1;
-	char *msg = (char *)malloc(sizeof(char) * 100);
-	    
-	    for (int p = 0; p <= windowSize-1; p++)
-	    {
-		msg[0]='\0';
-		sprintf(msg, "%d", frames[p]);
-		printf("Sending frame: %s\n", msg);
-		send(sockfd, msg, sizeof(char) * strlen(msg), 0);
-		sleep(1);
-	    }
+            char msg[100];
+    
+            for (int p = 0; p <= windowSize-1; p++)
+            {
+                msg[0]='\0';
+                sprintf(msg, "%d", frames[p]);
+                printf("Sending frame: %s\n", msg);
+                send(sockfd, msg, sizeof(char) * strlen(msg), 0);
+                sleep(1);
+            }
             i+=windowSize;
             while (!acknowledge()){
-                char *msg = (char *)malloc(sizeof(char) * 100);
+                for (int l=k;l<i;l++)
+                {
+                    if (frames[l]==resend){
+                        char msg[100];
     
-	    for (int p = 0; p <= i-1; p++)
-	    {
-		msg[0]='\0';
-		sprintf(msg, "%d", frames[p]);
-		printf("Sending frame: %s\n", msg);
-		send(sockfd, msg, sizeof(char) * strlen(msg), 0);
-		sleep(1);
-	    }
+                    for (int p = l; p <= l; p++)
+                    {
+                        msg[0]='\0';
+                        sprintf(msg, "%d", frames[p]);
+                        printf("Sending frame: %s\n", msg);
+                        send(sockfd, msg, sizeof(char) * strlen(msg), 0);
+                        sleep(1);
+                    }
+                        break;
+                    }
+                }
             }
             k++;
         }
         else{
-            char *msg = (char *)malloc(sizeof(char) * 100);
+            char msg[100];
     
-	    for (int p = i; p <= i; p++)
-	    {
-		msg[0]='\0';
-		sprintf(msg, "%d", frames[p]);
-		printf("Sending frame: %s\n", msg);
-		send(sockfd, msg, sizeof(char) * strlen(msg), 0);
-		sleep(1);
-	    }
+                for (int p = i; p <= i; p++)
+                {
+                    msg[0]='\0';
+                    sprintf(msg, "%d", frames[p]);
+                    printf("Sending frame: %s\n", msg);
+                    send(sockfd, msg, sizeof(char) * strlen(msg), 0);
+                    sleep(1);
+                }
             while (!acknowledge()){
-                char *msg = (char *)malloc(sizeof(char) * 100);
+                printf("RESEND !!!!!\n");
+                for (int l=k;l<i;l++)
+                {
+                    printf("%d\t%d\n",frames[l],resend);
+                    if (frames[l]==resend){
+                        char *msg = (char *)malloc(sizeof(char) * 100);
     
-	    for (int p = k; p <= i; p++)
-	    {
-		msg[0]='\0';
-		sprintf(msg, "%d", frames[p]);
-		printf("Sending frame: %s\n", msg);
-		send(sockfd, msg, sizeof(char) * strlen(msg), 0);
-		sleep(1);
-	    }
+                        for (int p = l; p <= l; p++)
+                        {
+                            msg[0]='\0';
+                            sprintf(msg, "%d", frames[p]);
+                            printf("Sending frame: %s\n", msg);
+                            send(sockfd, msg, sizeof(char) * strlen(msg), 0);
+                            sleep(1);
+                        }
+                        break;
+                    }
+                }
             }
             k++;    i++;
         }
@@ -154,6 +171,6 @@ void main()
         exit(EXIT_FAILURE);
     }
 
-    pthread_create(&t, NULL, stopAndWait, &windowSize);
+    pthread_create(&t, NULL, selectiveRepeat, &windowSize);
     pthread_join(t, NULL);
 }
